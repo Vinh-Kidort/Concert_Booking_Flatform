@@ -1,0 +1,34 @@
+# Maven build directory
+target/
+
+
+# Keep Maven Wrapper JAR so .\mvnw works out of the box for evaluators
+#.mvn/wrapper/maven-wrapper.jar
+
+# Help file
+HELP.md
+
+# Logs & Secrets
+*.log
+.env
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Eclipse / STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# VS Code & NetBeans
+.vscode/
+/nbproject/private/
+/nbbuild/
+/dist/

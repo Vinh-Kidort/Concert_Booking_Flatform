@@ -1,0 +1,50 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: concert-booking-platform
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/concert_db
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres123}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000 # 10 phút TTL mặc định
+
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_dummy_placeholder_for_ci}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_dummy_placeholder_for_ci}
+
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:this-is-a-dev-only-secret-key-change-in-production-min-32-chars}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  packages-to-scan: com.ticketbooking.concert_booking_platform.controller

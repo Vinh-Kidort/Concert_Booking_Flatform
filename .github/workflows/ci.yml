@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # GitHub-hosted ubuntu-latest runners come with Docker pre-installed
+      # and running, so Testcontainers-based integration tests
+      # (BookingConcurrencyIntegrationTest, ConcertBookingPlatformApplicationTests)
+      # work out of the box without any extra service containers here.
+      - name: Verify Docker is available
+        run: docker info
+
+      - name: Run tests
+        run: ./mvnw clean test -B
+        env:
+          # Dummy values — no test actually calls the real Stripe API.
+          # These only exist so Spring context loads StripeConfig successfully.
+          STRIPE_SECRET_KEY: sk_test_dummy_for_ci
+          STRIPE_WEBHOOK_SECRET: whsec_dummy_for_ci
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Maven Tests
+          path: target/surefire-reports/*.xml
+          reporter: java-junit
+
+      - name: Upload surefire reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
