@@ -1,5 +1,4 @@
-[![CI/CD Pipeline](https://github.com/Vinh-Kidort/Concert_Booking_Flatform
-/actions/workflows/ci.yml/badge.svg)](https://github.com/Vinh-Kidort/Concert_Booking_Flatform
+[![CI/CD Pipeline](https://github.com/Vinh-Kidort/Concert_Booking_Flatform/actions/workflows/ci.yml/badge.svg)](https://github.com/Vinh-Kidort/Concert_Booking_Flatform
 /actions/workflows/ci.yml)
 
 # Concert Ticket Booking Platform (Backend API)
