@@ -10,7 +10,6 @@ import com.ticketbooking.concert_booking_platform.repository.*;
 import com.ticketbooking.concert_booking_platform.service.BookingService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,6 +21,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -55,12 +55,14 @@ class BookingConcurrencyIntegrationTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.datasource.hikari.maximum-pool-size", () -> "30");
+        registry.add("spring.datasource.hikari.connection-timeout", () -> "30000");
     }
-
 
     @BeforeEach
     void setUp() {
-        Concert concert = concertRepository.save(Concert.builder()
+        // saveAndFlush Concert
+        Concert concert = concertRepository.saveAndFlush(Concert.builder()
                 .title("Flash Sale Concert Test " + UUID.randomUUID())
                 .venue("National Stadium")
                 .eventDate(OffsetDateTime.now().plusDays(30))
@@ -68,10 +70,12 @@ class BookingConcurrencyIntegrationTest {
                 .build());
         concertId = concert.getId();
 
-        TicketCategory category = ticketCategoryRepository.save(TicketCategory.builder()
+        // 👉 ĐÃ BỔ SUNG originalPrice theo đúng Migration V7
+        TicketCategory category = ticketCategoryRepository.saveAndFlush(TicketCategory.builder()
                 .concert(concert)
                 .name("VIP Test")
                 .price(new BigDecimal("500.00"))
+                .originalPrice(new BigDecimal("500.00"))
                 .totalQuantity(INITIAL_STOCK)
                 .availableQuantity(INITIAL_STOCK)
                 .build());
@@ -87,6 +91,19 @@ class BookingConcurrencyIntegrationTest {
     @Test
     void concurrentBookingRequests_neverOversell_evenWhenDemandExceedsStock() throws InterruptedException {
         int numberOfRequests = 50;
+
+        // Tạo sẵn và flush 50 users vào DB trước
+        List<Long> userIds = new ArrayList<>();
+        for (int i = 0; i < numberOfRequests; i++) {
+            User user = userRepository.saveAndFlush(User.builder()
+                    .email("testuser" + UUID.randomUUID() + "@test.com")
+                    .fullName("User " + i)
+                    .passwordHash("hash")
+                    .role(UserRole.CUSTOMER)
+                    .build());
+            userIds.add(user.getId());
+        }
+
         ExecutorService executor = Executors.newFixedThreadPool(20);
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(numberOfRequests);
@@ -95,13 +112,7 @@ class BookingConcurrencyIntegrationTest {
         AtomicInteger failureCount = new AtomicInteger(0);
 
         for (int i = 0; i < numberOfRequests; i++) {
-            Long userId = userRepository.save(User.builder()
-                    .email("testuser" + UUID.randomUUID() + "@test.com")
-                    .fullName("User " + i)
-                    .passwordHash("hash")
-                    .role(UserRole.CUSTOMER)
-                    .build()).getId();
-
+            final Long userId = userIds.get(i);
             executor.submit(() -> {
                 try {
                     startLatch.await();
@@ -138,11 +149,13 @@ class BookingConcurrencyIntegrationTest {
 
     @Test
     void duplicateIdempotencyKey_concurrentRetries_onlyCreateOneBooking() throws InterruptedException {
-        Long userId = userRepository.save(User.builder()
+        // saveAndFlush User
+        User user = userRepository.saveAndFlush(User.builder()
                 .email("retry-user-" + UUID.randomUUID() + "@test.com")
                 .fullName("Retry User")
                 .passwordHash("hash")
-                .role(UserRole.CUSTOMER).build()).getId();
+                .role(UserRole.CUSTOMER).build());
+        Long userId = user.getId();
 
         String sharedIdempotencyKey = UUID.randomUUID().toString();
         int numberOfRetries = 10;
@@ -167,13 +180,6 @@ class BookingConcurrencyIntegrationTest {
                     bookingService.createBooking(userId, request);
                 } catch (Exception e) {
                     errors.incrementAndGet();
-                    System.err.println(
-                            "Thread " + Thread.currentThread().getName()
-                                    + " failed: "
-                                    + e.getClass().getName()
-                                    + " - "
-                                    + e.getMessage()
-                    );
                 } finally {
                     doneLatch.countDown();
                 }

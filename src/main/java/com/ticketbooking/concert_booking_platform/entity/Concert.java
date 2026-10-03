@@ -1,5 +1,7 @@
 package com.ticketbooking.concert_booking_platform.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.ticketbooking.concert_booking_platform.enums.ConcertApprovalStatus;
 import com.ticketbooking.concert_booking_platform.enums.ConcertStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -17,6 +19,7 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Concert {
 
     @Id
@@ -43,6 +46,25 @@ public class Concert {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id")
+    private Organization organization;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", nullable = false, length = 20)
+    @Builder.Default
+    private ConcertApprovalStatus approvalStatus = ConcertApprovalStatus.DRAFT;
+
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewed_by")
+    private User reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private OffsetDateTime reviewedAt;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;

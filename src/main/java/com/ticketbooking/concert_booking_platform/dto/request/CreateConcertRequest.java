@@ -27,6 +27,9 @@ public class CreateConcertRequest {
     @Valid
     private List<TicketCategoryRequest> ticketCategories;
 
+    @NotNull
+    private Long organizationId;
+
     @Getter @Setter
     public static class TicketCategoryRequest {
         @NotBlank
@@ -37,5 +40,8 @@ public class CreateConcertRequest {
 
         @NotNull @Min(1)
         private Integer totalQuantity;
+
+        @NotNull @Min(0)
+        private Integer compQuantity;
     }
 }

@@ -12,9 +12,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.PrivateKey;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -27,6 +29,8 @@ public class BookingService {
     private final VoucherRepository voucherRepository;
     private final UserRepository userRepository;
     private final BookingTransactionExecutor bookingTransactionExecutor; // Inject Executor mới
+    private final OutboxEventPublisher outboxEventPublisher;
+    private final SeatRepository seatRepository;
 
     /**
      * Public entry point — deliberately NOT @Transactional.
@@ -74,20 +78,59 @@ public class BookingService {
         booking.setUpdatedBy(operatorId != null ? userRepository.getReferenceById(operatorId) : null);
         booking.setStatusNote(note);
         booking.setUpdatedAt(OffsetDateTime.now());
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Write the outbox event in the SAME transaction as the status change —
+        // this is what makes the pattern atomic. If anything in this method
+        // rolls back, the event row rolls back too. See OutboxEventPublisher.
+        if (newStatus == BookingStatus.CONFIRMED) {
+            booking.getItems().stream()
+                    .filter(item -> item.getSeat() != null)
+                    .forEach(item -> {
+                        Seat seat = seatRepository.findByIdInForUpdate(List.of(item.getSeat().getId()))
+                                .stream().findFirst().orElseThrow();
+                        seat.setStatus("BOOKED");
+                        seatRepository.save(seat);
+                    });
+            outboxEventPublisher.publish(
+                    "BOOKING",
+                    booking.getId(),
+                    "BookingConfirmed",
+                    Map.of(
+                            "bookingId", booking.getId(),
+                            "userEmail", booking.getUser().getEmail(),
+                            "userFullName", booking.getUser().getFullName(),
+                            "concertTitle", booking.getConcert().getTitle(),
+                            "finalAmount", booking.getFinalAmount().toString()
+                    )
+            );
+        }
+
+        return saved;
     }
 
     private void releaseInventory(Booking booking) {
         List<BookingItem> sortedItems = booking.getItems().stream()
-                .sorted(Comparator.comparing(item -> item.getTicketCategory().getId()))
+                .sorted(Comparator.comparing(item ->
+                        item.getTicketCategory() != null
+                                ? item.getTicketCategory().getId()
+                                : item.getSeat().getId()))
                 .toList();
 
         for (BookingItem item : sortedItems) {
-            TicketCategory category = ticketCategoryRepository
-                    .findByIdForUpdate(item.getTicketCategory().getId())
-                    .orElseThrow();
-            category.setAvailableQuantity(category.getAvailableQuantity() + item.getQuantity());
-            ticketCategoryRepository.save(category);
+            if (item.getTicketCategory() != null) {
+                TicketCategory category = ticketCategoryRepository
+                        .findByIdForUpdate(item.getTicketCategory().getId())
+                        .orElseThrow();
+                category.setAvailableQuantity(category.getAvailableQuantity() + item.getQuantity());
+                ticketCategoryRepository.save(category);
+            } else if (item.getSeat() != null) {
+                Seat seat = seatRepository.findByIdInForUpdate(List.of(item.getSeat().getId()))
+                        .stream().findFirst().orElseThrow();
+                seat.setStatus("AVAILABLE");
+                seat.setBookingItemId(null);
+                seatRepository.save(seat);
+            }
         }
 
         if (booking.getVoucherCode() != null) {

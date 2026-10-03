@@ -46,16 +46,27 @@ public class BookingResponse {
     public static class BookingItemResponse {
         private Long ticketCategoryId;
         private String categoryName;
+        private Long seatId;
+        private Integer seatNumber;
         private Integer quantity;
         private BigDecimal unitPrice;
 
         public static BookingItemResponse from(BookingItem item) {
-            return BookingItemResponse.builder()
-                    .ticketCategoryId(item.getTicketCategory().getId())
-                    .categoryName(item.getTicketCategory().getName())
+            BookingItemResponseBuilder builder = BookingItemResponse.builder()
                     .quantity(item.getQuantity())
-                    .unitPrice(item.getUnitPrice())
-                    .build();
+                    .unitPrice(item.getUnitPrice());
+
+            if (item.getTicketCategory() != null) {
+                builder.ticketCategoryId(item.getTicketCategory().getId())
+                        .categoryName(item.getTicketCategory().getName());
+            }
+
+            if (item.getSeat() != null) {
+                builder.seatId(item.getSeat().getId())
+                        .seatNumber(item.getSeat().getSeatNumber());
+            }
+
+            return builder.build();
         }
     }
 }

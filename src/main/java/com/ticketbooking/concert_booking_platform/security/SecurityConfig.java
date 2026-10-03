@@ -20,6 +20,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
     private final JwtAccessDeniedHandler accessDeniedHandler;
+    private final AdmissionCheckFilter admissionCheckFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -42,6 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/v1/payments/webhook").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         // Public browse: "Browse concerts" / "View ticket categories
                         // and prices" are customer-facing discovery features and
                         // should not require login. Booking itself still does.
@@ -50,9 +52,13 @@ public class SecurityConfig {
                         // covers that case. <<<
                         .requestMatchers(HttpMethod.GET, "/api/v1/concerts/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("OPERATOR", "ADMIN")
+                        .requestMatchers("/api/v1/organizer/**").hasRole("ORGANIZER")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(admissionCheckFilter, JwtAuthenticationFilter.class);
+
+
         return http.build();
     }
 }

@@ -54,4 +54,10 @@ public class AdminConcertController {
         Concert concert = concertService.cancelConcert(concertId);
         return ApiResponse.success(ConcertResponse.summary(concert));
     }
+
+    @PostMapping("/{concertId}/submit-review")
+    public ApiResponse<ConcertResponse> submitForReview(@PathVariable Long concertId) {
+        Concert concert = concertService.submitForReview(concertId);
+        return ApiResponse.success(ConcertResponse.summary(concert));
+    }
 }
