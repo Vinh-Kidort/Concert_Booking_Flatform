@@ -3,6 +3,7 @@ package com.ticketbooking.concert_booking_platform.dto.response;
 import com.ticketbooking.concert_booking_platform.entity.TicketCategory;
 import lombok.Builder;
 import lombok.Getter;
+import org.springframework.expression.spel.ast.NullLiteral;
 
 import java.math.BigDecimal;
 
@@ -15,6 +16,10 @@ public class TicketCategoryResponse {
     private Integer availableQuantity;
     private Integer totalQuantity;
 
+    private BigDecimal originalPrice;
+    private BigDecimal discountedPrice;
+    private boolean isDiscounted;
+
     public static TicketCategoryResponse from(TicketCategory tc) {
         return TicketCategoryResponse.builder()
                 .id(tc.getId())
@@ -22,6 +27,9 @@ public class TicketCategoryResponse {
                 .price(tc.getPrice())
                 .availableQuantity(tc.getAvailableQuantity())
                 .totalQuantity(tc.getTotalQuantity())
+                .originalPrice(tc.getOriginalPrice())
+                .discountedPrice(tc.getDiscountedPrice())
+                .isDiscounted(tc.getDiscountedPrice() != null)
                 .build();
     }
 }

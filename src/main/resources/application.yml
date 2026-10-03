@@ -11,6 +11,11 @@ spring:
     password: ${DB_PASSWORD:postgres123}
     driver-class-name: org.postgresql.Driver
 
+    hikari:
+      maximum-pool-size: 30  # tăng từ mặc định 10, vì pessimistic lock giữ connection lâu hơn
+      minimum-idle: 10
+      connection-timeout: 5000
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -34,15 +39,64 @@ spring:
     redis:
       time-to-live: 600000 # 10 phút TTL mặc định
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 stripe:
   secret-key: ${STRIPE_SECRET_KEY:sk_test_dummy_placeholder_for_ci}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_dummy_placeholder_for_ci}
 
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: concert-booking-platform
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+      percentiles:
+        http:
+          server:
+            requests: 0.5, 0.95, 0.99
+
 app:
   jwt:
     secret: ${JWT_SECRET:this-is-a-dev-only-secret-key-change-in-production-min-32-chars}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+  outbox:
+    poll-interval-ms: 5000 # scheduler quét bảng outbox mỗi 30`s
+
+  waiting-room:
+    enabled: false
+    admission-batch-size: 50   # số user được thả mỗi lần — map với breaking point đã đo ở Bước 4
+    admission-interval-ms: 5000
+    admission-token-ttl-minutes: 10
+    queue-token-ttl-minutes: 30 # user rời tab quá lâu thì mất vị trí, phải join lại
 
 springdoc:
   swagger-ui:

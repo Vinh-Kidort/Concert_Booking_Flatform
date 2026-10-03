@@ -73,6 +73,7 @@ public class PaymentWebhookController {
             switch (event.getType()) {
                 case "payment_intent.succeeded" -> handlePaymentSucceeded(event);
                 case "payment_intent.payment_failed" -> handlePaymentFailed(event);
+                case "charge.refunded" -> handleChargeRefunded(event);
                 default -> log.info("Unhandled Stripe event type: {}", event.getType());
             }
         } catch (Exception e) {
@@ -142,5 +143,42 @@ public class PaymentWebhookController {
                 () -> log.warn("Received payment_intent.payment_failed for unknown PaymentIntent: {}. Ignoring.",
                         intent.getId())
         );
+    }
+
+    private void handleChargeRefunded(Event event) {
+        com.stripe.model.Charge charge = extractCharge(event);
+        if (charge == null) {
+            log.error("Could not deserialize Charge from event {}", event.getId());
+            return;
+        }
+
+        String paymentIntentId = charge.getPaymentIntent();
+        if (paymentIntentId == null) {
+            log.warn("charge.refunded event {} has no PaymentIntent, cannot map to a booking", event.getId());
+            return;
+        }
+
+        bookingRepository.findByStripePaymentIntentId(paymentIntentId).ifPresentOrElse(booking -> {
+            if (booking.getStatus() == BookingStatus.CANCELLED) {
+                log.info("Booking {} already CANCELLED, ignoring duplicate refund webhook", booking.getId());
+                return;
+            }
+            bookingService.updateStatus(booking.getId(), BookingStatus.CANCELLED, null,
+                    "Refunded via Stripe webhook, amount=" + booking.getRefundAmount());
+            log.info("Booking {} cancelled after confirmed refund", booking.getId());
+        }, () -> log.warn("Received charge.refunded for unknown PaymentIntent: {}. Ignoring.", paymentIntentId));
+    }
+
+    private com.stripe.model.Charge extractCharge(Event event) {
+        var deserializer = event.getDataObjectDeserializer();
+        if (deserializer.getObject().isPresent()) {
+            return (com.stripe.model.Charge) deserializer.getObject().get();
+        }
+        try {
+            return (com.stripe.model.Charge) deserializer.deserializeUnsafe();
+        } catch (Exception e) {
+            log.error("deserializeUnsafe() failed for charge event {}", event.getId(), e);
+            return null;
+        }
     }
 }

@@ -15,7 +15,7 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
 
-    # DỰNG SẴN POSTGRES VÀ REDIS TRÊN RUNNER ĐỂ SPRING BOOT KẾT NỐI KHI TEST
+
     services:
       postgres:
         image: postgres:15-alpine
@@ -38,6 +38,16 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:3-alpine
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 

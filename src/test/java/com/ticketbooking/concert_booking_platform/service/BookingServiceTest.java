@@ -31,16 +31,23 @@ class BookingServiceTest {
     @Mock private VoucherRepository voucherRepository;
     @Mock private UserRepository userRepository;
     @Mock private BookingTransactionExecutor bookingTransactionExecutor;
+    @Mock private SeatRepository seatRepository;
+
+
+    @Mock private OutboxEventPublisher outboxEventPublisher;
 
     @InjectMocks private BookingService bookingService;
 
+    private User sampleUser;
+    private Concert sampleConcert;
     private TicketCategory vipCategory;
 
     @BeforeEach
     void setUp() {
-        Concert concert = Concert.builder().id(10L).title("Test Concert").build();
+        sampleUser = User.builder().id(1L).email("alice@test.com").fullName("Alice").build();
+        sampleConcert = Concert.builder().id(10L).title("Test Concert").build();
         vipCategory = TicketCategory.builder()
-                .id(100L).concert(concert).name("VIP")
+                .id(100L).concert(sampleConcert).name("VIP")
                 .price(new BigDecimal("500.00")).totalQuantity(10).availableQuantity(10)
                 .build();
     }
@@ -81,10 +88,10 @@ class BookingServiceTest {
         Booking winnerBooking = Booking.builder().id(5L).idempotencyKey("key-3").build();
 
         when(bookingRepository.findByIdempotencyKey("key-3"))
-                .thenReturn(Optional.empty())      // first check: not found yet
-                .thenReturn(Optional.of(winnerBooking)); // fallback query after race: found
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(winnerBooking));
         when(bookingTransactionExecutor.executeCreateBooking(1L, request))
-                .thenThrow(new DataIntegrityViolationException("duplicate key value violates unique constraint"));
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
 
         Booking result = bookingService.createBooking(1L, request);
 
@@ -95,13 +102,12 @@ class BookingServiceTest {
     void createBooking_executorThrowsDataIntegrityViolation_andFallbackFindsNothing_rethrowsOriginalException() {
         CreateBookingRequest request = new CreateBookingRequest();
         request.setIdempotencyKey("key-4");
-        DataIntegrityViolationException original = new DataIntegrityViolationException("unexpected constraint violation");
+        DataIntegrityViolationException original = new DataIntegrityViolationException("unexpected constraint");
 
         when(bookingRepository.findByIdempotencyKey("key-4")).thenReturn(Optional.empty());
         when(bookingTransactionExecutor.executeCreateBooking(1L, request)).thenThrow(original);
 
-        assertThatThrownBy(() -> bookingService.createBooking(1L, request))
-                .isSameAs(original);
+        assertThatThrownBy(() -> bookingService.createBooking(1L, request)).isSameAs(original);
     }
 
     @Test
@@ -141,7 +147,13 @@ class BookingServiceTest {
         BookingItem item = BookingItem.builder()
                 .ticketCategory(vipCategory).quantity(3).unitPrice(vipCategory.getPrice()).build();
         Booking booking = Booking.builder()
-                .id(1L).status(BookingStatus.AWAITING_PAYMENT).items(List.of(item)).build();
+                .id(1L)
+                .user(sampleUser)
+                .concert(sampleConcert)
+                .finalAmount(new BigDecimal("1500.00"))
+                .status(BookingStatus.AWAITING_PAYMENT)
+                .items(List.of(item))
+                .build();
 
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
         when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -151,6 +163,9 @@ class BookingServiceTest {
         verify(ticketCategoryRepository, never()).findByIdForUpdate(any());
         assertThat(vipCategory.getAvailableQuantity()).isEqualTo(5);
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+
+
+        verify(outboxEventPublisher).publish(eq("BOOKING"), eq(1L), eq("BookingConfirmed"), any());
     }
 
     @Test

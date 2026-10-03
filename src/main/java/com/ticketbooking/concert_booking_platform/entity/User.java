@@ -1,5 +1,6 @@
 package com.ticketbooking.concert_booking_platform.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.ticketbooking.concert_booking_platform.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -17,6 +18,7 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User {
 
     @Id

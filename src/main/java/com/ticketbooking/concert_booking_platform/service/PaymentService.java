@@ -1,5 +1,6 @@
 package com.ticketbooking.concert_booking_platform.service;
 
+import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.param.PaymentIntentCreateParams;
@@ -8,8 +9,10 @@ import com.ticketbooking.concert_booking_platform.entity.Booking;
 import com.ticketbooking.concert_booking_platform.enums.BookingStatus;
 import com.ticketbooking.concert_booking_platform.exception.ResourceNotFoundException;
 import com.ticketbooking.concert_booking_platform.repository.BookingRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +22,14 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 @Slf4j
 public class PaymentService {
+
+    @Value("${stripe.secret-key}")
+    private String stripeSecretKey;
+
+    @PostConstruct
+    public void init() {
+        Stripe.apiKey = stripeSecretKey;
+    }
 
     private final BookingRepository bookingRepository;
 
@@ -41,9 +52,11 @@ public class PaymentService {
         }
 
         // Stripe expects the smallest currency unit (e.g. cents for USD).
-        long amountInCents = booking.getFinalAmount()
-                .multiply(BigDecimal.valueOf(100))
-                .longValueExact();
+        long amountInCents = booking.getFinalAmount().divide(new BigDecimal("250"), java.math.RoundingMode.HALF_UP).longValue();
+
+        if (amountInCents < 50) {
+            amountInCents = 1000; // default 10 USD
+        }
 
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                 .setAmount(amountInCents)

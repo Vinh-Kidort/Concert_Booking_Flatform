@@ -16,7 +16,7 @@ import java.time.OffsetDateTime;
  * concurrency-control strategy is PESSIMISTIC LOCK (SELECT ... FOR UPDATE),
  * applied via {@code TicketCategoryRepository#findByIdForUpdate}. The
  * {@code version} column is kept only for audit/reference, it is NOT used
- * as an @Version optimistic-lock field on purpose — see ARCHITECTURE.md.
+ * as a @Version optimistic-lock field on purpose — see ARCHITECTURE.md.
  */
 @Entity
 @Table(name = "ticket_categories")
@@ -44,6 +44,19 @@ public class TicketCategory {
     @Column(name = "total_quantity", nullable = false)
     private Integer totalQuantity;
 
+    @Column(name = "original_price", nullable = false, precision = 12, scale = 2)
+    private BigDecimal originalPrice;
+
+    @Column(name = "discounted_price", precision = 12, scale = 2)
+    private BigDecimal discountedPrice;
+
+    @Column(name = "discount_applied_at")
+    private OffsetDateTime discountAppliedAt;
+
+    @Column(name = "comp_quantity", nullable = false)
+    @Builder.Default
+    private Integer compQuantity = 0;
+
     @Column(name = "available_quantity", nullable = false)
     private Integer availableQuantity;
 
@@ -56,4 +69,12 @@ public class TicketCategory {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
+
+
+    @PrePersist
+    public void prePersist() {
+        if (originalPrice == null && price != null) {
+            originalPrice = price;
+        }
+    }
 }

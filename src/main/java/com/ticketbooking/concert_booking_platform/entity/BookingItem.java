@@ -30,6 +30,10 @@ public class BookingItem {
     @JoinColumn(name = "ticket_category_id", nullable = false)
     private TicketCategory ticketCategory;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seat_id")
+    private Seat seat;
+
     @Column(nullable = false)
     private Integer quantity;
 

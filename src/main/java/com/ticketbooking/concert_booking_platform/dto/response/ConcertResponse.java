@@ -1,6 +1,7 @@
 package com.ticketbooking.concert_booking_platform.dto.response;
 
 import com.ticketbooking.concert_booking_platform.entity.Concert;
+import com.ticketbooking.concert_booking_platform.enums.ConcertApprovalStatus;
 import com.ticketbooking.concert_booking_platform.enums.ConcertStatus;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,6 +19,8 @@ public class ConcertResponse {
     private OffsetDateTime eventDate;
     private ConcertStatus status;
     private List<TicketCategoryResponse> ticketCategories; // null when listing, populated on detail view
+    private ConcertApprovalStatus approvalStatus;
+    private String rejectionReason;
 
     public static ConcertResponse summary(Concert c) {
         return ConcertResponse.builder()

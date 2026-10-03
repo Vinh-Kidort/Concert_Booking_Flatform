@@ -87,6 +87,15 @@ public class Booking {
     @Column(name = "stripe_payment_intent_id")
     private String stripePaymentIntentId;
 
+    @Column(name = "refund_amount", precision = 12, scale = 2)
+    private BigDecimal refundAmount;
+
+    @Column(name = "refund_requested_at")
+    private OffsetDateTime refundRequestedAt;
+
+    @Column(name = "stripe_refund_id")
+    private String stripeRefundId;
+
     public void addItem(BookingItem item) {
         item.setBooking(this);
         items.add(item);

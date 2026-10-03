@@ -63,6 +63,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Something went wrong");
     }
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingBody(org.springframework.http.converter.HttpMessageNotReadableException e) {
+        return build(HttpStatus.BAD_REQUEST, "MISSING_REQUEST_BODY", "Required request body is missing or malformed JSON");
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException e) {
         return build(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", e.getMessage());
@@ -75,5 +80,36 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalState(IllegalStateException e) {
         return build(HttpStatus.CONFLICT, "INVALID_STATE", e.getMessage());
+    }
+
+    @ExceptionHandler(InvalidApprovalTransitionException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidApprovalTransition(InvalidApprovalTransitionException e) {
+        return build(HttpStatus.CONFLICT, "INVALID_APPROVAL_TRANSITION", e.getMessage());
+    }
+
+    @ExceptionHandler(DiscountNotAllowedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDiscountNotAllowed(DiscountNotAllowedException e) {
+        return build(HttpStatus.BAD_REQUEST, "DISCOUNT_NOT_ALLOWED", e.getMessage());
+    }
+
+    @ExceptionHandler(CompTicketQuotaExhaustedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCompTicketQuotaExhausted(CompTicketQuotaExhaustedException e) {
+        return build(HttpStatus.CONFLICT, "COMP_TICKET_QUOTA_EXHAUSTED", e.getMessage());
+    }
+
+    @ExceptionHandler(SeatUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSeatUnavailable(SeatUnavailableException e) {
+        return build(HttpStatus.CONFLICT,"SEAT_UNAVAILABLE",e.getMessage());
+    }
+
+    @ExceptionHandler(RefundNotAllowedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRefundNotAllowed(RefundNotAllowedException e) {
+        return build(HttpStatus.CONFLICT, "REFUND_NOT_ALLOWED",e.getMessage());
+    }
+
+    @ExceptionHandler(com.stripe.exception.StripeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStripeException(com.stripe.exception.StripeException e) {
+        log.error("Stripe API error: {}", e.getMessage());
+        return build(HttpStatus.BAD_REQUEST, "STRIPE_ERROR", e.getMessage());
     }
 }

@@ -1,5 +1,3 @@
--- =====================================================================
--- V2__seed_data.sql
 -- Sample data for local development / demo / Postman collection.
 --
 -- All seeded users share the same demo password: Password123!
@@ -11,8 +9,8 @@ INSERT INTO users (email, full_name, password_hash, role) VALUES
     ('admin@ticketbooking.com',    'System Admin',   '$2b$10$TcYu4ArrHNulN.Lmh73vJOJ4L2qiEmrInUxAVNwPzxRFkGveUfpd2', 'ADMIN'),
     ('operator@ticketbooking.com', 'Ops Operator',   '$2b$10$TcYu4ArrHNulN.Lmh73vJOJ4L2qiEmrInUxAVNwPzxRFkGveUfpd2', 'OPERATOR'),
     ('alice@example.com',          'Alice Nguyen',   '$2b$10$TcYu4ArrHNulN.Lmh73vJOJ4L2qiEmrInUxAVNwPzxRFkGveUfpd2', 'CUSTOMER'),
-    ('bob@example.com',            'Bob Tran',       '$2b$10$TcYu4ArrHNulN.Lmh73vJOJ4L2qiEmrInUxAVNwPzxRFkGveUfpd2', 'CUSTOMER');
-
+    ('bob@example.com',            'Bob Tran',       '$2b$10$TcYu4ArrHNulN.Lmh73vJOJ4L2qiEmrInUxAVNwPzxRFkGveUfpd2', 'CUSTOMER'),
+    ('organizer1@ticketbooking.com', 'Sample Organizer', '$2b$10$TcYu4ArrHNulN.Lmh73vJOJ4L2qiEmrInUxAVNwPzxRFkGveUfpd2', 'ORGANIZER');
 
 -- Concerts
 -- ---------------------------------------------------------------------
