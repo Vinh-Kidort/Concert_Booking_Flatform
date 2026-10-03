@@ -8,6 +8,6 @@ RUN mvn clean package -DskipTests
 # Run Stage
 FROM public.ecr.aws/docker/library/eclipse-temurin:17-jre
 WORKDIR /app
-COPY target/*.jar app.jar
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
